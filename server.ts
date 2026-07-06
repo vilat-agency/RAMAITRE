@@ -5,7 +5,9 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import mongoose from 'mongoose';
 import session from 'express-session';
-import { MongoStore } from 'connect-mongo';
+import pkg from 'connect-mongo';
+import cors from 'cors';
+const MongoStore = (pkg as any).create ? pkg : (pkg as any).default;
 import { User } from './models/User';
 import { StudySession } from './models/StudySession';
 import crypto from 'crypto';
@@ -23,76 +25,14 @@ function ensureDbNameInUri(uri: string, dbName = "ramaitre"): string {
   return `${cleanBase}/${dbName}${query ? `?${query}` : ""}`;
 }
 
-// Helper robuste pour appeler Gemini avec repli automatique sur d'autres modèles
-// en cas d'erreur temporaire (quota dépassé, surcharge, modèle indisponible...).
-// Ordre de priorité : on tente d'abord le modèle "Pro" (meilleure qualité pour
-// corriger des copies de Bac), puis on retombe sur des modèles "Flash" moins
-// coûteux uniquement si le Pro échoue.
-async function generateContentWithRetry(ai: any, params: any) {
-  const primaryModel =
-    params.model || process.env.GEMINI_PRIMARY_MODEL || "gemini-2.5-pro";
-
-  const modelsToTry = [
-    primaryModel,
-    "gemini-2.5-pro",
-    "gemini-3.5-flash",
-    "gemini-2.5-flash",
-    "gemini-flash-latest",
-  ].filter((model, index, arr) => arr.indexOf(model) === index); // dédoublonnage
-
-  let lastError: any = null;
-
-  for (let attempt = 0; attempt < modelsToTry.length; attempt++) {
-    const currentModel = modelsToTry[attempt];
-    try {
-      console.log(
-        `[Gemini Call] Requesting generateContent using model: ${currentModel} (Attempt ${attempt + 1})`,
-      );
-      const response = await ai.models.generateContent({
-        ...params,
-        model: currentModel,
-      });
-      return response;
-    } catch (err: any) {
-      lastError = err;
-      const errMsg = err?.message || err?.toString() || "";
-      const is503 =
-        errMsg.includes("503") ||
-        errMsg.includes("UNAVAILABLE") ||
-        errMsg.includes("high demand") ||
-        errMsg.includes("temporary");
-      const isRateLimit =
-        errMsg.includes("429") ||
-        errMsg.includes("Quota") ||
-        errMsg.includes("RESOURCE_EXHAUSTED");
-      const isNotFound =
-        errMsg.includes("404") ||
-        errMsg.includes("not found") ||
-        errMsg.includes("NOT_FOUND");
-
-      console.warn(
-        `[Gemini Attempt Failed] Model ${currentModel} failed:`,
-        errMsg,
-      );
-
-      if (is503 || isRateLimit || isNotFound) {
-        const waitMs = isRateLimit ? 5000 : 2000;
-        console.log(`Waiting ${waitMs}ms before fallback to next model...`);
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
-        continue;
-      } else {
-        // Erreur structurelle/runtime, inutile de retenter avec un autre modèle
-        throw err;
-      }
-    }
-  }
-
-  throw lastError;
-}
-
 async function startServer() {
   const app = express();
   const PORT = parseInt(process.env.PORT || "3000", 10);
+
+  // Enable CORS (nécessaire car l'app Android native appelle le backend
+  // sur une origine différente, contrairement au web où tout est servi
+  // depuis le même domaine).
+  app.use(cors({ origin: true, credentials: true }));
 
   // Connect to MongoDB (non bloquant : si Mongo échoue, le serveur démarre
   // quand même pour que /api/solve et le front continuent de fonctionner).
@@ -113,8 +53,7 @@ async function startServer() {
     console.warn("MONGODB_URI not set, skipping database connection");
   }
 
-  // Session setup (fallback sur le store mémoire par défaut d'express-session
-  // si Mongo n'est pas disponible, pour ne jamais bloquer le démarrage).
+  // Session setup
   app.use(session({
     secret: process.env.SESSION_SECRET || 'ramaitre-2026-secret-dev-only',
     resave: false,
@@ -136,7 +75,7 @@ async function startServer() {
       if (!user) {
         user = await User.create({ username, password, referralCode: crypto.randomBytes(4).toString('hex') });
       }
-      (req.session as any).user = user;
+      (req as any).session.user = user;
       return res.json({ user });
     }
     return res.status(401).json({ error: "Invalid credentials" });
@@ -156,7 +95,7 @@ async function startServer() {
       return res.status(503).json({ error: "Base de données indisponible. Réessayez dans quelques instants." });
     }
     const { subject, problem, result } = req.body;
-    const userId = (req.session as any).user?._id;
+    const userId = (req as any).session?.user?._id;
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
     
     await StudySession.create({ userId, subject, problem, result });
@@ -244,7 +183,8 @@ Ressens la fierté d'aider un élève malgache à réussir son Bac avec brio et 
         ];
       }
 
-      const response = await generateContentWithRetry(ai, {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
         contents: contents,
       });
 
@@ -254,6 +194,95 @@ Ressens la fierté d'aider un élève malgache à réussir son Bac avec brio et 
       let errorMessage = "Une erreur s'est produite lors de la résolution du problème.";
       if (error.status === 429 || error.message?.includes("429")) {
         errorMessage = "Le quota de l'API Gemini est dépassé. Veuillez réessayer dans quelques instants ou vérifier votre clé API.";
+      } else if (error.status === 503 || error.message?.includes("503")) {
+        errorMessage = "Le modèle d'IA est actuellement surchargé. Veuillez réessayer plus tard.";
+      }
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { messages } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: "Le paramètre 'messages' est requis et doit être un tableau." });
+      }
+
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: "Clé API Gemini manquante. Veuillez la configurer dans les paramètres." });
+      }
+
+      const systemInstruction = `
+Tu es le tuteur d'élite Ramaitre, un enseignant extrêmement bienveillant et expert légendaire du Baccalauréat de Madagascar (Séries A, C et D).
+Ta mission est d'assister l'élève s'il a des questions, des problèmes, ou s'il a besoin d'explications supplémentaires sur les cours, les exercices ou sa copie de bac blanc.
+Sois toujours chaleureux, encourageant et dynamique. N'hésite pas à utiliser quelques expressions malgaches de réconfort et d'encouragement comme "Mahereza !", "Misaotra !", "Tongasoa !", "Faly mihaona !" ou "Mirary fahombiazana !".
+Donne des explications méthodologiques rigoureuses, étape par étape, adaptées au programme du Bac malgache (Syllabus de mathématiques, physique-chimie, SVT et matières littéraires).
+Reste humble, pédagogue, et aide l'élève à surmonter tout stress ou difficulté.
+`;
+
+      const contents = messages.map((m: any) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }]
+      }));
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: contents,
+        config: {
+          systemInstruction,
+        }
+      });
+
+      res.json({ result: response.text });
+    } catch (error: any) {
+      console.error("Error in chat endpoint:", error);
+      let errorMessage = "Une erreur s'est produite lors de la discussion.";
+      if (error.status === 429 || error.message?.includes("429")) {
+        errorMessage = "Le quota de l'API Gemini est dépassé. Veuillez réessayer dans quelques instants.";
+      } else if (error.status === 503 || error.message?.includes("503")) {
+        errorMessage = "Le modèle d'IA est actuellement surchargé. Veuillez réessayer plus tard.";
+      }
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/explain-concept", async (req, res) => {
+    try {
+      const { concept, subject } = req.body;
+      if (!concept || !concept.trim()) {
+        return res.status(400).json({ error: "Le concept est requis." });
+      }
+
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: "Clé API Gemini manquante. Veuillez la configurer dans les paramètres." });
+      }
+
+      const systemInstruction = `
+Tu es le tuteur d'élite Ramaitre, un enseignant expert et extrêmement bienveillant du Baccalauréat de Madagascar (Séries A, C et D).
+Ta mission est d'expliquer de manière simple, vivante et imagée un concept académique complexe ou un mot difficile dans la matière "${subject || 'Général'}".
+Utilise une analogie concrète de la vie de tous les jours (par exemple inspirée de Madagascar : le riz national, les taxis-brousses, le zébu majestueux, le grand baobab, etc.) pour rendre l'explication mémorable.
+Structure ta réponse au format Markdown clair en 3 courtes rubriques :
+1. **🔍 En mots simples** : Une explication sans jargon en 1 ou 2 phrases courtes.
+2. **💡 L'analogie de Ramaitre** : Une image de la vie de tous les jours très facile à visualiser.
+3. **🎓 Au Baccalauréat** : Pourquoi ce concept est crucial pour l'épreuve et comment l'aborder.
+
+Termine toujours par un mot d'encouragement dynamique et bienveillant comme "Mahereza !" ou "Faly manampy !".
+`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: `Explique-moi le concept ou terme académique suivant : "${concept}" de la matière "${subject || 'Général'}".`,
+        config: {
+          systemInstruction,
+        }
+      });
+
+      res.json({ result: response.text });
+    } catch (error: any) {
+      console.error("Error in explain-concept endpoint:", error);
+      let errorMessage = "Une erreur s'est produite lors de l'explication.";
+      if (error.status === 429 || error.message?.includes("429")) {
+        errorMessage = "Le quota de l'API Gemini est dépassé. Veuillez réessayer dans quelques instants.";
       } else if (error.status === 503 || error.message?.includes("503")) {
         errorMessage = "Le modèle d'IA est actuellement surchargé. Veuillez réessayer plus tard.";
       }
