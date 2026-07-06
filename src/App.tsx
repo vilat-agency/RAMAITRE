@@ -64,7 +64,9 @@ function processMarkdown(text: string): string {
     // Otherwise, apply lexique replacements
     let processed = part;
     for (const term of Object.keys(lexique)) {
-      const regex = new RegExp(`\\b${term}\\b`, 'gi');
+      // Escape regex special characters so terms with parentheses, +, ., etc. never break the RegExp
+      const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escapedTerm}\\b`, 'gi');
       processed = processed.replace(regex, `<span class="lexique-tooltip">${term}</span>`);
     }
     return processed;
