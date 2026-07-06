@@ -83,7 +83,7 @@ $$z_k = \\sqrt[n]{R} e^{i \\left(\\frac{\\phi + 2k\\pi}{n}\\right)} \\quad \\tex
 $$(f^{-1})'(y) = \\frac{1}{f'(f^{-1}(y))}$$
 * **Inégalité des Accroissements Finis (IAF) :** Si $f$ est continue sur $[a; b]$ et dérivable sur $]a; b[$, et s'il existe deux réels $m$ et $M$ tels que $m \\le f'(x) \\le M$ pour tout $x \\in ]a; b[$, alors :
 $$m(b-a) \\le f(b) - f(a) \\le M(b-a)$$
-  * Si $|f'(x)| \\le k$, alors $|f(b) - f(a)| \\le k|b-a\|$.
+  * Si $|f'(x)| \\le k$, alors $|f(b) - f(a)| \\le k|b-a|$.
 * **Dérivées successives :** Notées $f^{(n)}(x)$, obtenues en dérivant $n$ fois de suite la fonction $f$.`
   },
   {
@@ -350,10 +350,11 @@ $$C_A V_A = C_B V_B$$
     content: `### 1. Lentilles Minces
 * **Définitions :** Une lentille est convergente ($f > 0$) ou divergente ($f < 0$).
 * **Éléments :** Axe principal, centre optique, foyer principal objet ($F$) et image ($F'$).
-* **Vergence ($C$) :** $C = 1/OF'$ (en dioptries).
-* **Formules de conjugaison de Descartes :**
-  $$\\frac{1}{OF'} - \\frac{1}{OF} = \\frac{1}{f}$$
-* **Grandissement ($\gamma$) :** $\\gamma = \\frac{A'B'}{AB} = \\frac{OA'}{OA}$.`
+* **Vergence ($C$) :** $C = 1/f'$ (en dioptries), avec $f' = \\overline{OF'}$.
+* **Formule de conjugaison de Descartes (origine au centre optique O) :**
+  $$\\frac{1}{\\overline{OA'}} - \\frac{1}{\\overline{OA}} = \\frac{1}{f'}$$
+  où $A$ est la position de l'objet et $A'$ celle de l'image sur l'axe optique.
+* **Grandissement ($\\gamma$) :** $\\gamma = \\frac{\\overline{A'B'}}{\\overline{AB}} = \\frac{\\overline{OA'}}{\\overline{OA}}$.`
   },
   {
     id: "phys-atomique-nucleaire",
@@ -362,14 +363,14 @@ $$C_A V_A = C_B V_B$$
     summary: "Noyau atomique, énergie de liaison, radioactivité (alpha, beta, gamma) et réactions nucléaires (fission, fusion).",
     content: `### 1. Le Noyau Atomique
 * **Composition :** Nucléons (protons et neutrons).
-* **Énergie de liaison :** Correspont au défaut de masse $\\delta m$ selon la relation d'Einstein : $E_l = \\delta m \\cdot c^2$.
-* **Stabilité :** Les noyaux stables ont un nombre de masse $A$ généralement compris entre 20 et 190.
+* **Énergie de liaison :** Correspond au défaut de masse $\\delta m$ selon la relation d'Einstein : $E_l = \\delta m \\cdot c^2$.
+* **Stabilité :** Les noyaux stables ont un nombre de masse $A$ généralement compris entre 20 et 190 (au-delà, la radioactivité $\\alpha$ et la fission spontanée dominent, jusqu'au dernier isotope quasi-stable, le bismuth 209).
 
 ### 2. Radioactivité et Réactions Nucléaires
-* **Radioactivité :** Transformation spontanée d'un noyau instable (père) en un noyau plus stable (fils) avec émission de rayonnement ($\alpha, \\beta^-, \\beta^+, \\gamma$).
+* **Radioactivité :** Transformation spontanée d'un noyau instable (père) en un noyau plus stable (fils) avec émission de rayonnement ($\\alpha, \\beta^-, \\beta^+, \\gamma$).
 * **Loi de décroissance :** $N(t) = N_0 e^{-\\lambda t}$.
 * **Fission :** Division d'un noyau lourd en noyaux plus légers (ex: centrales nucléaires).
-* **Fusion :** Union de deux noyaux légers en un noyau plus lourd (ex: étoiles, très exxoénergétique).`
+* **Fusion :** Union de deux noyaux légers en un noyau plus lourd (ex: étoiles, très exoénergétique).`
   },
   {
     id: "bio-moleculaire",
@@ -423,7 +424,7 @@ La gamétogénèse est la formation de cellules sexuelles haploïdes ($n$ chromo
 * **Rétrocontrôles :** Les hormones ovariennes (œstrogènes, progestérone) et testiculaires exercent des rétrocontrôles négatifs (ou positif pour déclencher l'ovulation) sur l'axe hypothalamo-hypophysaire.
 
 ### 3. Fécondation et Développement Embryonnaire
-* **Fecandation :** Rencontre de l'ovocyte II et d'un spermatozoïde dans l'ampoule de la trompe utérine. Fusion des noyaux (caryogamie) pour former le zygote ($2n$). Un blocage de la polyspermie empêche la pénétration d'autres spermatozoïdes.
+* **Fécondation :** Rencontre de l'ovocyte II et d'un spermatozoïde dans l'ampoule de la trompe utérine. Fusion des noyaux (caryogamie) pour former le zygote ($2n$). Un blocage de la polyspermie empêche la pénétration d'autres spermatozoïdes.
 * **Nidation :** L'œuf se divise (segmentation, morula, blastocyste) et s'implante dans l'endomètre utérin vers le 7ème jour.
 * **Lactation :** Stimulée par la prolactine (production de lait) et l'ocytocine (éjection du lait lors de la tétée).
 
@@ -574,7 +575,7 @@ La dissertation littéraire est un exercice de démonstration logique s'appuyant
 
 #### C. L'importance de l'exemple littéraire
 Chaque argument doit être illustré par une citation ou une référence précise à une œuvre.
-* *Exemple :* "La poésie est un cri d'exil et d'engagement patriotique." $\implies$ Citer Jacques Rabemananjara dans *Sur les marches du soir* ou Aimé Césaire dans *Cahier d'un retour au pays natal*.
+* *Exemple :* "La poésie est un cri d'exil et d'engagement patriotique." $\\implies$ Citer Jacques Rabemananjara dans *Sur les marches du soir* ou Aimé Césaire dans *Cahier d'un retour au pays natal*.
 
 ### 3. Méthode du Résumé de texte et Commentaire
 1. **Le résumé :** Réduire le texte au quart de sa longueur initiale (avec une marge de 10 % autorisée). Il faut reformuler fidèlement sans recopier des phrases entières et respecter le système d'énonciation.
@@ -607,22 +608,22 @@ Chaque argument doit être illustré par une citation ou une référence précis
     summary: "Mastering essential grammar tools (Active/Passive voice, Conditionals) and the structure of essay writing for the Madagascar Baccalaureate English exam.",
     content: `### 1. Active and Passive Voice
 The passive voice is very frequently tested in the English paper of the Bacc Madagascar.
-* **Rule:** Subject + Verb + Object (Active) $\implies$ Object + **to be (in the tense of the active verb)** + **Past Participle** + by + Subject (Passive).
+* **Rule:** Subject + Verb + Object (Active) $\\implies$ Object + **to be (in the tense of the active verb)** + **Past Participle** + by + Subject (Passive).
 * **Examples:**
-  * *Present Simple:* "The student writes an essay." $\implies$ "An essay **is written** by the student."
-  * *Past Simple:* "The President signed the law." $\implies$ "The law **was signed** by the President."
-  * *Present Perfect:* "Scientists have discovered a new species." $\implies$ "A new species **has been discovered** by scientists."
+  * *Present Simple:* "The student writes an essay." $\\implies$ "An essay **is written** by the student."
+  * *Past Simple:* "The President signed the law." $\\implies$ "The law **was signed** by the President."
+  * *Present Perfect:* "Scientists have discovered a new species." $\\implies$ "A new species **has been discovered** by scientists."
 
 ### 2. Conditionals (The If-Clauses)
 Conditionals express conditions and their results. There are three main types:
 * **Type 1 (Real/Possible in the present/future) :**
-  $$\text{If + Present Simple} \implies \text{Will + Verb (Base form)}$$
+  $$\\text{If + Present Simple} \\implies \\text{Will + Verb (Base form)}$$
   * *Example:* "If you study hard, you **will pass** your Bacc."
 * **Type 2 (Unreal/Imaginary in the present) :**
-  $$\text{If + Past Simple} \implies \text{Would + Verb (Base form)}$$
+  $$\\text{If + Past Simple} \\implies \\text{Would + Verb (Base form)}$$
   * *Example:* "If I **were** rich, I would travel around Madagascar." (Note: "were" is used for all pronouns in Type 2 conditional).
 * **Type 3 (Unreal/Regret in the past) :**
-  $$\text{If + Past Perfect} \implies \text{Would have + Past Participle}$$
+  $$\\text{If + Past Perfect} \\implies \\text{Would have + Past Participle}$$
   * *Example:* "If she **had revised** her lessons, she **would have passed** the exam."
 
 ### 3. Essay Writing Structure
