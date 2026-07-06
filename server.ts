@@ -4,7 +4,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import mongoose from 'mongoose';
 import session from 'express-session';
-import MongoStore from 'connect-mongo';
+import { MongoStore } from 'connect-mongo';
 import { User } from './models/User';
 import { StudySession } from './models/StudySession';
 import crypto from 'crypto';
