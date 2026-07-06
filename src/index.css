@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-handwriting: "Patrick Hand", cursive;
+}
+
+.markdown-body {
+  width: 100%;
+}
+
+.millimeter-paper {
+  background-color: #fff !important;
+  background-image: 
+    linear-gradient(rgba(200, 100, 100, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 100, 100, 0.3) 1px, transparent 1px),
+    linear-gradient(rgba(200, 100, 100, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 100, 100, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(200, 100, 100, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 100, 100, 0.05) 1px, transparent 1px) !important;
+  background-size: 100px 100px, 100px 100px, 10px 10px, 10px 10px, 2px 2px, 2px 2px !important;
+  background-position: -1px -1px !important;
+}
+
+.markdown-body h1, 
+.markdown-body h2, 
+.markdown-body h3 {
+  font-weight: bold;
+  margin-top: 36px !important;
+  margin-bottom: 36px !important;
+  line-height: 36px !important;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.markdown-body h1 {
+  font-size: 1.25rem;
+}
+
+.markdown-body h2 {
+  font-size: 1.125rem;
+}
+
+.markdown-body h3 {
+  font-size: 1.125rem;
+}
+
+.markdown-body p {
+  margin-bottom: 36px !important;
+  line-height: 36px !important;
+}
+
+.markdown-body ul, .markdown-body ol {
+  margin-left: 1.5rem;
+  margin-bottom: 36px !important;
+}
+
+.markdown-body li {
+  margin-bottom: 0 !important;
+  line-height: 36px !important;
+}
+
+.markdown-body strong {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+/* LaTeX block rendering enhancements */
+.katex-display {
+  margin: 1rem 0 !important;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 32px auto !important;
+  width: auto;
+  min-width: 70%;
+  max-width: 100%;
+  background-color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border: 2px solid #374151;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  border: 1px solid #4b5563;
+  padding: 10px 20px !important;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 1.15rem;
+}
+
+.markdown-body table tr:first-child th,
+.markdown-body table tr:first-child td {
+  background-color: #f8fafc;
+  font-weight: bold;
+  border-bottom: 2px solid #374151;
+  color: #1e293b;
+}
+
+/* Give the first column (containing x, f'(x), f(x)) a prominent look */
+.markdown-body table td:first-child,
+.markdown-body table th:first-child {
+  background-color: #f8fafc;
+  font-weight: bold;
+  border-right: 2px solid #374151;
+  color: #1e293b;
+  width: 12%;
+  min-width: 80px;
+}
+
+/* Styled multi-page divider */
+.markdown-body hr {
+  border: none;
+  border-top: 2px dashed rgba(255, 128, 128, 0.4);
+  margin: 48px 0;
+  position: relative;
+  overflow: visible;
+  text-align: center;
+  break-after: page;
+  page-break-after: always;
+}
+
+.markdown-body hr::after {
+  content: "PAGE SUIVANTE (COPIE DOUBLE)";
+  background-color: #fefefe;
+  padding: 0 16px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  color: #ff6666;
+  letter-spacing: 3px;
+  white-space: nowrap;
+}
+

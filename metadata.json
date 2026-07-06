@@ -1,0 +1,6 @@
+{
+  "name": "Bac IA",
+  "description": "Plateforme éducative avec IA d'excellence configurée pour le Baccalauréat de Madagascar (Séries A, C, D).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
