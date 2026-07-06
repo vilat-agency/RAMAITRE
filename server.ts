@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { GoogleGenAI } from "@google/genai";
 import express from "express";
 import path from "path";
@@ -8,6 +9,19 @@ import { MongoStore } from 'connect-mongo';
 import { User } from './models/User';
 import { StudySession } from './models/StudySession';
 import crypto from 'crypto';
+
+// Ajoute automatiquement un nom de base de données à l'URI Mongo si absent
+// (utile pour les URI Atlas du type mongodb+srv://user:pass@cluster.mongodb.net/?appName=...
+// qui n'incluent pas de nom de base dans le chemin).
+function ensureDbNameInUri(uri: string, dbName = "ramaitre"): string {
+  const [beforeQuery, query] = uri.split("?");
+  const afterProtocol = beforeQuery.replace(/^[a-zA-Z+]+:\/\//, "");
+  const hasPathSegment = afterProtocol.split("@").pop()?.includes("/") &&
+    !afterProtocol.split("@").pop()?.endsWith("/");
+  if (hasPathSegment) return uri;
+  const cleanBase = beforeQuery.replace(/\/$/, "");
+  return `${cleanBase}/${dbName}${query ? `?${query}` : ""}`;
+}
 
 // Helper robuste pour appeler Gemini avec repli automatique sur d'autres modèles
 // en cas d'erreur temporaire (quota dépassé, surcharge, modèle indisponible...).
@@ -80,20 +94,32 @@ async function startServer() {
   const app = express();
   const PORT = parseInt(process.env.PORT || "3000", 10);
 
-  // Connect to MongoDB
-  if (process.env.MONGODB_URI) {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to MongoDB");
+  // Connect to MongoDB (non bloquant : si Mongo échoue, le serveur démarre
+  // quand même pour que /api/solve et le front continuent de fonctionner).
+  let mongoReady = false;
+  const mongoUri = process.env.MONGODB_URI
+    ? ensureDbNameInUri(process.env.MONGODB_URI)
+    : undefined;
+
+  if (mongoUri) {
+    try {
+      await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 8000 });
+      mongoReady = true;
+      console.log("Connected to MongoDB");
+    } catch (err: any) {
+      console.error("MongoDB connection failed, continuing without database:", err?.message || err);
+    }
   } else {
     console.warn("MONGODB_URI not set, skipping database connection");
   }
 
-  // Session setup
+  // Session setup (fallback sur le store mémoire par défaut d'express-session
+  // si Mongo n'est pas disponible, pour ne jamais bloquer le démarrage).
   app.use(session({
     secret: process.env.SESSION_SECRET || 'ramaitre-2026-secret-dev-only',
     resave: false,
     saveUninitialized: false,
-    store: process.env.MONGODB_URI ? MongoStore.create({ mongoUrl: process.env.MONGODB_URI }) : undefined,
+    store: mongoReady ? MongoStore.create({ mongoUrl: mongoUri! }) : undefined,
     cookie: { maxAge: 1000 * 60 * 60 * 24 * 30 } // 30 days
   }));
 
@@ -101,6 +127,9 @@ async function startServer() {
 
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
+    if (!mongoReady) {
+      return res.status(503).json({ error: "Base de données indisponible. Réessayez dans quelques instants." });
+    }
     const { username, password } = req.body;
     if (username === 'Albertinot' && password === 'Ramaitre') {
       let user = await User.findOne({ username });
@@ -114,12 +143,18 @@ async function startServer() {
   });
 
   app.post("/api/auth/refer", async (req, res) => {
+    if (!mongoReady) {
+      return res.status(503).json({ error: "Base de données indisponible. Réessayez dans quelques instants." });
+    }
     const { username, referredBy } = req.body;
     const user = await User.create({ username, password: 'password', referredBy, referralCode: crypto.randomBytes(4).toString('hex') });
     res.json({ user });
   });
 
   app.post("/api/save-session", async (req, res) => {
+    if (!mongoReady) {
+      return res.status(503).json({ error: "Base de données indisponible. Réessayez dans quelques instants." });
+    }
     const { subject, problem, result } = req.body;
     const userId = (req.session as any).user?._id;
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
