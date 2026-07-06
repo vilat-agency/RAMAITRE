@@ -9,6 +9,73 @@ import { User } from './models/User';
 import { StudySession } from './models/StudySession';
 import crypto from 'crypto';
 
+// Helper robuste pour appeler Gemini avec repli automatique sur d'autres modèles
+// en cas d'erreur temporaire (quota dépassé, surcharge, modèle indisponible...).
+// Ordre de priorité : on tente d'abord le modèle "Pro" (meilleure qualité pour
+// corriger des copies de Bac), puis on retombe sur des modèles "Flash" moins
+// coûteux uniquement si le Pro échoue.
+async function generateContentWithRetry(ai: any, params: any) {
+  const primaryModel =
+    params.model || process.env.GEMINI_PRIMARY_MODEL || "gemini-2.5-pro";
+
+  const modelsToTry = [
+    primaryModel,
+    "gemini-2.5-pro",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+  ].filter((model, index, arr) => arr.indexOf(model) === index); // dédoublonnage
+
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < modelsToTry.length; attempt++) {
+    const currentModel = modelsToTry[attempt];
+    try {
+      console.log(
+        `[Gemini Call] Requesting generateContent using model: ${currentModel} (Attempt ${attempt + 1})`,
+      );
+      const response = await ai.models.generateContent({
+        ...params,
+        model: currentModel,
+      });
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      const errMsg = err?.message || err?.toString() || "";
+      const is503 =
+        errMsg.includes("503") ||
+        errMsg.includes("UNAVAILABLE") ||
+        errMsg.includes("high demand") ||
+        errMsg.includes("temporary");
+      const isRateLimit =
+        errMsg.includes("429") ||
+        errMsg.includes("Quota") ||
+        errMsg.includes("RESOURCE_EXHAUSTED");
+      const isNotFound =
+        errMsg.includes("404") ||
+        errMsg.includes("not found") ||
+        errMsg.includes("NOT_FOUND");
+
+      console.warn(
+        `[Gemini Attempt Failed] Model ${currentModel} failed:`,
+        errMsg,
+      );
+
+      if (is503 || isRateLimit || isNotFound) {
+        const waitMs = isRateLimit ? 5000 : 2000;
+        console.log(`Waiting ${waitMs}ms before fallback to next model...`);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        continue;
+      } else {
+        // Erreur structurelle/runtime, inutile de retenter avec un autre modèle
+        throw err;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 async function startServer() {
   const app = express();
   const PORT = parseInt(process.env.PORT || "3000", 10);
@@ -142,8 +209,7 @@ Ressens la fierté d'aider un élève malgache à réussir son Bac avec brio et 
         ];
       }
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await generateContentWithRetry(ai, {
         contents: contents,
       });
 
